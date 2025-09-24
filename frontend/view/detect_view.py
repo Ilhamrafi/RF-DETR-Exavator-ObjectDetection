@@ -45,7 +45,6 @@ def get_detector(video_path=None):
     """
     # Logging ringan untuk memudahkan pelacakan saat memproses banyak video.
     video_name = os.path.basename(video_path) if video_path else "Unknown"
-    st.write(f"Inisialisasi detector untuk video: {video_name}")
     print(f"Inisialisasi detector untuk video: {video_name}")
     
     return ExcavatorDetector(
@@ -184,7 +183,6 @@ def run_detection(
             
         # Logging singkat untuk debugging di UI/terminal.
         video_name = os.path.basename(video_path)
-        st.write(f"Memproses video: {video_name}")
         print(f"Memproses video: {video_name}")
         
         # Siapkan path output (video/CSV/Excel).
