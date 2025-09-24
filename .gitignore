@@ -3,3 +3,6 @@ __pycache__/
 
 # Ignore Folder Data
 data/
+
+# Ignore Folder src
+src/
