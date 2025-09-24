@@ -2,7 +2,7 @@
 
 ---
 
-Sistem deteksi objek exavator untuk menghitung siklus ritase dan passing secara otomatis pada video, berbasis model RF-DETR, dengan interface Streamlit untuk visualisasi hasil, pelaporan, serta ekspor data ke Excel dan CSV.
+Sistem deteksi objek exavator untuk menghitung siklus ritase dan passing secara otomatis pada video, berbasis model RF-DETR.
 
 ## Struktur Folder
 
@@ -36,8 +36,7 @@ Sistem deteksi objek exavator untuk menghitung siklus ritase dan passing secara 
    cd frontend
    streamlit run app.py
    ```
-2. Upload video ke folder `data/input/`
-3. Ikuti instruksi untuk melakukan deteksi dan melihat hasilnya
+2. Ikuti instruksi untuk melakukan deteksi dan melihat hasilnya
 
 ## Output
 
