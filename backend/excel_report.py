@@ -43,6 +43,7 @@ def generate_excel_report(
         - Datetime (timestamp event)
         - Ritase (akumulatif pada ID yang sama)
         - Passing (akumulatif pada ID yang sama)
+        - Interval Passing (detik)
         - Siklus (bertambah saat ritase terdeteksi)
 
     Args:
@@ -59,8 +60,8 @@ def generate_excel_report(
         tracking_sheet = wb.active
         tracking_sheet.title = "Tracking"
 
-        # Header tabel Tracking
-        headers = ["Nama File", "ID", "Datetime", "Ritase", "Passing", "Siklus"]
+        # Header tabel Tracking - TAMBAHKAN HEADER INTERVAL PASSING
+        headers = ["Nama File", "ID", "Datetime", "Ritase", "Passing", "Interval Passing (detik)", "Siklus"]
         for col, header in enumerate(headers, 1):
             cell = tracking_sheet.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
@@ -110,6 +111,29 @@ def generate_excel_report(
         # Urutkan berdasarkan waktu
         all_events.sort(key=lambda x: x["timestamp"])  # type: ignore[index]
 
+        # Hitung interval antar passing events
+        passing_events_sorted = [event for event in all_events if event["type"] == "passing"]
+        passing_events_sorted.sort(key=lambda x: x["seconds"])
+
+        # Tambahkan field interval ke setiap passing event (termasuk yang pertama)
+        for i in range(len(passing_events_sorted)):
+            if i == 0:
+                # Untuk passing pertama, interval adalah waktu dari awal video
+                interval = passing_events_sorted[i]["seconds"]
+                passing_events_sorted[i]["interval_passing"] = round(interval, 2)
+            else:
+                prev_event = passing_events_sorted[i-1]
+                current_event = passing_events_sorted[i]
+                # Hitung selisih waktu dalam detik
+                interval = current_event["seconds"] - prev_event["seconds"]
+                passing_events_sorted[i]["interval_passing"] = round(interval, 2)
+
+        # Buat dictionary pencarian untuk memetakan event ke interval passing
+        interval_mapping = {}
+        for event in passing_events_sorted:
+            key = (event["frame"], event["type"])
+            interval_mapping[key] = event.get("interval_passing", None)
+
         # Penomoran ID & siklus (bertambah saat ritase muncul)
         current_id = 1
         current_siklus = 1
@@ -155,16 +179,23 @@ def generate_excel_report(
                 elif prev_event["type"] == "ritase":  # type: ignore[index]
                     ritase_count += 1
 
+            # Mendapatkan nilai interval passing jika tipe event adalah passing
+            interval_value = None
+            if event["type"] == "passing":  # type: ignore[index]
+                key = (event["frame"], event["type"])  # type: ignore[index]
+                interval_value = interval_mapping.get(key, None)
+
             tracking_sheet.cell(row=row, column=1, value=filename_value)
             tracking_sheet.cell(row=row, column=2, value=custom_id)
             tracking_sheet.cell(row=row, column=3, value=timestamp_str)
             tracking_sheet.cell(row=row, column=4, value=ritase_count)
             tracking_sheet.cell(row=row, column=5, value=passing_count)
-            tracking_sheet.cell(row=row, column=6, value=siklus)
+            tracking_sheet.cell(row=row, column=6, value=interval_value)  # Kolom interval passing
+            tracking_sheet.cell(row=row, column=7, value=siklus)
             row += 1
 
-        # Lebar kolom Tracking
-        column_widths = [30, 10, 20, 10, 10, 10]
+        # Lebar kolom Tracking - SESUAIKAN DENGAN TAMBAHAN KOLOM
+        column_widths = [30, 10, 20, 10, 10, 20, 10]
         for i, width in enumerate(column_widths, 1):
             tracking_sheet.column_dimensions[get_column_letter(i)].width = width
 
@@ -198,7 +229,7 @@ def generate_excel_report(
         # Sheet Detail Events
         detail_sheet = wb.create_sheet("Detail Events")
 
-        detail_headers = ["No", "Tipe", "ID", "Siklus", "Frame", "Detik", "Timestamp", "Confidence"]
+        detail_headers = ["No", "Tipe", "ID", "Siklus", "Frame", "Detik", "Timestamp", "Confidence", "Interval Passing (detik)"]
         for col, header in enumerate(detail_headers, 1):
             cell = detail_sheet.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
@@ -214,12 +245,21 @@ def generate_excel_report(
             detail_sheet.cell(row=row, column=6, value=event["seconds"])
             detail_sheet.cell(row=row, column=7, value=event["timestamp"].strftime("%d-%m-%Y %H:%M:%S"))  # type: ignore[index]
             detail_sheet.cell(row=row, column=8, value=event["confidence"])
+            
+            # Tambahkan kolom baru untuk interval passing
+            interval_value = None
+            if event["type"] == "passing":  # type: ignore[index]
+                key = (event["frame"], event["type"])  # type: ignore[index]
+                interval_value = interval_mapping.get(key, None)
+            detail_sheet.cell(row=row, column=9, value=interval_value)
+            
             row += 1
 
         # Lebar kolom Detail Events
-        for col in ["A", "B", "C", "D", "E", "F", "G", "H"]:
+        for col in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
             detail_sheet.column_dimensions[col].width = 15
         detail_sheet.column_dimensions["G"].width = 20
+        detail_sheet.column_dimensions["I"].width = 20
 
         wb.save(output_path)
         logger.info("Laporan Excel berhasil disimpan: %s", output_path)
